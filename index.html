@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Karthikesan G — Data Engineer</title>
+  <title>Karthikesan G — Software Engineer</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500;600;700;900&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
@@ -36,14 +36,14 @@
     github:    "https://github.com/Karthikesan-G",
     email:     "karthikesan.in@gmail.com",
     phone:     "+91 7708243662",
-    cvPath:    "Karthikesan_G.pdf",
+    cvPath:    "https://docs.google.com/document/export?format=pdf&id=1Py8e_ksGdT5EMa4VYdFSLMq1ckb7ooF5htqSbmhQR0k",
 
     /* — Default theme: "dark" or "light" — */
     defaultTheme: "light",
 
     /* — Stats — numbers animate 0 → actual value on scroll — */
     stats: [
-      { number:3.7,  suffix:"",   label:"Years Experience",      decimals:1 },
+      { number:0,  suffix:"",   label:"Years Experience",      decimals:1 },
       { number:40,   suffix:"%+", label:"Avg. Performance Gains", decimals:0 },
       { number:3,    suffix:"×",  label:"GEM Award Winner",       decimals:0 },
       { number:15,   suffix:"+",  label:"Projects Delivered",     decimals:0 },
@@ -56,6 +56,7 @@
         client:   "Client: Alliance Bernstein",
         role:     "Software Engineer",
         date:     "Aug 2025 — Present",
+        date_val: "08/09/2025 — Present",
         location: "Bengaluru · Hybrid",
         bullets: [
           "Migrated legacy <b>Perl batch systems</b> to Python + Apache Airflow, improving scalability and maintainability.",
@@ -69,6 +70,7 @@
         client:   "",
         role:     "Senior Software Engineer",
         date:     "Oct 2024 — May 2025",
+        date_val: "21/10/2024 — 21/05/2025",
         location: "Chennai · Onsite",
         bullets: [
           "Built Python pipelines automating data collection across millions of records daily — <b>70% productivity boost</b>.",
@@ -81,6 +83,7 @@
         client:   "",
         role:     "Trainee → Senior Software Engineer",
         date:     "Mar 2022 — Oct 2024",
+        date_val: "18/03/2022 — 18/10/2024",
         location: "Chennai · Hybrid",
         bullets: [
           "Delivered <b>100% accuracy</b> across automated data collection pipelines for 15+ diverse client projects.",
@@ -141,6 +144,33 @@
       { name:"DAG Authoring for Apache Airflow", issuer:"Astronomer",      id:"" },
     ],
   };
+
+function calculateExperienceYears(experience) {
+  let totalMs = 0;
+
+  experience.forEach(job => {
+    const [startStr, endStr] = job.date_val.split('—').map(s => s.trim());
+
+    const [sd, sm, sy] = startStr.split('/').map(Number);
+    const start = new Date(sy, sm - 1, sd);
+
+    let end;
+    if (endStr.toLowerCase() === 'present') {
+      end = new Date();
+    } else {
+      const [ed, em, ey] = endStr.split('/').map(Number);
+      end = new Date(ey, em - 1, ed);
+    }
+
+    totalMs += end - start;
+  });
+
+  const years = totalMs / (1000 * 60 * 60 * 24 * 365.25);
+
+  return parseFloat(years.toFixed(1));
+}
+
+CONFIG.stats[0].number = calculateExperienceYears(CONFIG.experience);
   /* ============================================================ */
   </script>
 
@@ -542,7 +572,7 @@
   <div class="nav-right">
     <ul class="nav-links" id="navLinks"></ul>
     <button class="theme-btn" id="themeBtn" title="Toggle theme">◐</button>
-    <a class="nav-cv" id="navCv" target="_blank">CV ↗</a>
+    <a class="nav-cv" id="navCv" target="_blank">Download CV ↗</a>
   </div>
 </nav>
 
@@ -619,7 +649,7 @@
 
 <!-- SKILLS -->
 <section id="skills">
-  <div class="s-head reveal"><span class="s-num">04</span><h2 class="t-head s-title">Stack</h2><div class="s-rule"></div></div>
+  <div class="s-head reveal"><span class="s-num">04</span><h2 class="t-head s-title">Tech Stack</h2><div class="s-rule"></div></div>
   <div class="sk-grid stagger" id="skGrid"></div>
 </section>
 
@@ -644,7 +674,7 @@
 <!-- FOOTER -->
 <footer class="reveal">
   <span>© 2025 Karthikesan G</span>
-  <span>Built with HTML · GitHub Pages</span>
+  <!-- <span>Built with HTML · GitHub Pages</span> -->
 </footer>
 
 <script>
