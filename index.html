@@ -26,15 +26,14 @@
       "Python Developer",
       "ETL Specialist",
       "Web Scraping Engineer",
-      "Pipeline Architect",
     ],
 
     /* — Stack pills shown in hero — */
-    stack: ["Python","Apache Airflow","PySpark","AWS","Snowflake","Databricks","dbt","Docker"],
+    stack: ["Python", "Perl", "SQL", "Apache Airflow","PySpark","AWS","Snowflake","Docker"],
 
     /* — Links — UPDATE THESE — */
-    linkedin:  "https://linkedin.com/in/YOUR_HANDLE",
-    github:    "https://github.com/YOUR_HANDLE",
+    linkedin:  "https://linkedin.com/in/karthikesan-g/",
+    github:    "https://github.com/Karthikesan-G",
     email:     "karthikesan.in@gmail.com",
     phone:     "+91 7708243662",
     cvPath:    "Karthikesan_G.pdf",
@@ -244,6 +243,11 @@
       display:grid; grid-template-rows:1fr auto;
       position:relative;
     }
+    @media (max-width: 900px) {
+    #hero {
+        padding: 4.5rem 1.5rem 0;
+    }
+    }
 
     .hero-inner {
       display:flex; flex-direction:column;
@@ -274,19 +278,36 @@
 
     /* ── ROLE SWITCHER ── */
     .hero-role-wrap {
-      height:1.6em; overflow:hidden; position:relative;
-      opacity:0; animation:fadeUp 0.6s ease forwards 0.5s;
+    height: 24px;              /* fixed height avoids font metric issues */
+    overflow: hidden;
+    display: flex;
+    align-items: center;
     }
-    .hero-role-inner {
-      display:flex; flex-direction:column;
-      transition:transform 0.55s cubic-bezier(0.77,0,0.18,1);
-    }
+
     .hero-role-item {
-      font-family:'JetBrains Mono',monospace;
-      font-size:0.72rem; font-weight:400;
-      letter-spacing:0.14em; text-transform:uppercase;
-      color:var(--accent); line-height:1.6em;
-      white-space:nowrap; flex-shrink:0;
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 400;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+
+    opacity: 1;
+    transform: translateY(0);
+    transition:
+        opacity 250ms ease,
+        transform 250ms ease;
+    }
+
+    .hero-role-item.is-exiting {
+    opacity: 0;
+    transform: translateY(8px);
+    }
+
+    .hero-role-item.is-entering {
+        opacity: 0;
+        transform: translateY(-8px);
     }
 
     .hero-tagline {
@@ -541,8 +562,8 @@
     
 
     <!-- 3. Role switcher -->
-    <div class="hero-role-wrap" id="heroRoleWrap">
-      <div class="hero-role-inner" id="heroRoleInner"></div>
+    <div class="hero-role-wrap">
+        <span class="hero-role-item" id="heroRoleText"></span>
     </div>
 
     <!-- 4. Tagline -->
@@ -648,26 +669,29 @@ if (!CONFIG.available) document.getElementById('heroBadge').style.display='none'
 
 // ── ROLE SWITCHER ──
 // Build one extra clone of first item at end for seamless loop
-const roles = [...CONFIG.roles, CONFIG.roles[0]];
-const inner = document.getElementById('heroRoleInner');
-inner.innerHTML = roles.map(r=>`<div class="hero-role-item">${r}</div>`).join('');
+const roleText = document.getElementById('heroRoleText');
 
 let roleIdx = 0;
-function nextRole() {
-  roleIdx++;
-  inner.style.transition = 'transform 0.55s cubic-bezier(0.77,0,0.18,1)';
-  inner.style.transform = `translateY(-${roleIdx * 1.6}em)`;
+roleText.textContent = CONFIG.roles[0];
 
-  // When we reach the clone of first item, snap back silently
-  if (roleIdx === CONFIG.roles.length) {
-    setTimeout(() => {
-      inner.style.transition = 'none';
-      inner.style.transform = 'translateY(0)';
-      roleIdx = 0;
-    }, 580);
-  }
-}
-setInterval(nextRole, 2400);
+setInterval(() => {
+  roleText.classList.add('is-exiting');
+
+  setTimeout(() => {
+    roleIdx = (roleIdx + 1) % CONFIG.roles.length;
+
+    roleText.classList.remove('is-exiting');
+    roleText.classList.add('is-entering');
+
+    roleText.textContent = CONFIG.roles[roleIdx];
+
+    requestAnimationFrame(() => {
+      roleText.classList.remove('is-entering');
+    });
+
+  }, 250);
+
+}, 2400);
 
 // Tagline + stack
 document.getElementById('heroTagline').textContent = CONFIG.tagline;
