@@ -37,7 +37,7 @@
 
     formspreeId: "YOUR_FORMSPREE_ID",
 
-    defaultTheme: "light",
+    defaultTheme: "dark",
 
     stats: [
       { number:0,  suffix:"",   label:"Years Experience",      decimals:1 },
@@ -57,6 +57,9 @@
       { name:"perl.svg",      label:"Perl"       },
       { name:"kubernetes.svg",      label:"Kubernetes"       },
       { name:"fastapi.svg",      label:"FastAPI"       },
+      { name:"django.svg",      label:"Django"       },
+      { name:"git.svg",      label:"Git"       },
+      { name:"sql.svg",      label:"SQL"       },
     ],
 
     terminal: [
@@ -245,9 +248,8 @@
     .t-head   {font-family:'Outfit',sans-serif;font-weight:700;letter-spacing:-.025em;line-height:1.1}
     .t-body   {font-family:'Outfit',sans-serif;font-weight:300;color:var(--text-mid);line-height:1.8}
 
-    /* NAV */
-    nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:1.5rem 4rem;border-bottom:1px solid transparent;transition:background .3s,border-color .3s}
-    nav.scrolled{background:var(--blur-bg);backdrop-filter:blur(16px);border-color:var(--border)}
+    /* NAV — always glass so logos passing underneath never break readability */
+    nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:1.5rem 4rem;border-bottom:1px solid var(--border);background:var(--blur-bg);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);transition:background .3s,border-color .3s}
     .nav-logo{font-family:'Outfit',sans-serif;font-weight:900;font-size:1.4rem;letter-spacing:-.06em;color:var(--text);text-decoration:none}
     .nav-logo .dot{color:var(--accent)}
     .nav-right{display:flex;align-items:center;gap:2.5rem}
@@ -262,7 +264,8 @@
     /* HERO */
     #hero{min-height:100vh;padding:0 4rem;display:grid;grid-template-rows:1fr auto}
     .hero-inner{display:grid;grid-template-columns:1fr 520px;gap:2rem;align-items:center;padding-top:6rem;padding-bottom:4.5rem}
-    .hero-left{display:flex;flex-direction:column;justify-content:flex-end}
+    /* hero-left sits above canvas so logos never cover name/text */
+    .hero-left{display:flex;flex-direction:column;justify-content:flex-end;position:relative;z-index:5}
     .hero-name{font-size:clamp(3.5rem,9vw,9rem);opacity:0;animation:fadeUp .75s ease forwards .15s}
     .hero-name .accent{color:var(--accent)}
     .hero-badge{display:inline-flex;align-items:center;gap:.55rem;margin-top:2rem;margin-bottom:.6rem;opacity:0;animation:fadeUp .6s ease forwards .35s}
@@ -295,15 +298,15 @@
       overflow:visible;
     }
 
-    /* canvas — positioned fixed via JS to sit behind hero-right without clipping */
+    /* canvas — below terminal, below hero-left text, below nav */
     #orbitCanvas{
       pointer-events:none;
-      z-index:1;
+      z-index:2;
     }
 
-    /* terminal card — floats on top */
+    /* terminal card — above canvas, logos always behind it */
     .term-wrap{
-      position:relative;z-index:3;
+      position:relative;z-index:4;
       width:70%;
       animation:termFloat 4s ease-in-out infinite;
     }
@@ -665,235 +668,307 @@ document.getElementById('heroTagline').textContent = CONFIG.tagline;
 document.getElementById('heroStack').innerHTML = CONFIG.stack.map(s=>`<span class="h-pill">${s}</span>`).join('');
 
 /* ══════════════════════════════════════════════════
-   ORBIT SCENE — Canvas renderer
-   • Canvas is position:fixed, painted to match hero-right screen coords
-   • Logos evenly spaced with enforced minimum gap (no clustering)
-   • Elliptical path, hexagon badges always upright, slight radial jitter
-   • Green particles + ambient glow
-   • Logos behind terminal at reduced opacity
+   ORBIT SCENE — matches reference image exactly
+   • Canvas fixed full-viewport, z-index ABOVE terminal so rings draw over it
+   • Two full circles centred on terminal centre
+   • Logos at varying radii (inside / between / outside rings)
+   • Thin connector lines between nearby logos
+   • Green glowing particles near ring paths
+   • Large soft radial glow behind everything
+   • SVG logos in hexagon badges, always upright
 ══════════════════════════════════════════════════ */
 (function(){
-  /* Create a fixed-position canvas that covers the full viewport */
   const canvas = document.getElementById('orbitCanvas');
-  canvas.style.position = 'fixed';
-  canvas.style.top      = '0';
-  canvas.style.left     = '0';
-  canvas.style.width    = '100vw';
-  canvas.style.height   = '100vh';
+  canvas.style.position    = 'fixed';
+  canvas.style.top         = '0';
+  canvas.style.left        = '0';
+  canvas.style.width       = '100vw';
+  canvas.style.height      = '100vh';
   canvas.style.pointerEvents = 'none';
-  canvas.style.zIndex   = '1';  /* behind terminal (z-index:3) but above page bg */
+  canvas.style.zIndex      = '2'; /* below terminal(4), hero-left(5), nav(200) */
 
   const wrap   = document.getElementById('heroRight');
   const termEl = wrap.querySelector('.term-wrap');
-  const logos  = CONFIG.orbitLogos;
-  const DARK   = ()=> document.documentElement.getAttribute('data-theme')==='dark';
+  const DARK   = () => document.documentElement.getAttribute('data-theme') === 'dark';
+  const ctx    = canvas.getContext('2d');
 
-  /* Preload SVG logos - DELAYED to ensure canvas is ready */
+  /* Preload SVG logos */
   const logoImages = {};
-  let logosLoaded = 0;
-
   CONFIG.orbitLogos.forEach(l => {
     const img = new Image();
-    img.src = `logos/${l.name}`;
-    img.onload = () => {
-      logoImages[l.name] = img;
-      logosLoaded++;
-      if(logosLoaded === CONFIG.orbitLogos.length) console.log('✅ All logos loaded');
-    };
-    img.onerror = () => console.warn(`❌ Logo failed to load: logos/${l.name}`);
+    img.src   = `logos/${l.name}`;
+    img.onload  = () => { logoImages[l.name] = img; };
   });
 
-  const ctx = canvas.getContext('2d');
-  let W,H,cx,cy,orx,ory,termRect;
+  let W, H, cx, cy, R1, R2;
+  /* Boundary rects — logos fade when entering these zones */
+  let navBottom = 0, heroBottom = 0, heroLeftRect = null, termRect2 = null;
 
-  function resize(){
+  function resize() {
     W = canvas.width  = window.innerWidth;
     H = canvas.height = window.innerHeight;
-
-    /* orbit centre = centre of hero-right in screen coords */
+    /* Centre on hero-right wrap, NOT the terminal — so orbit never floats */
     const wr = wrap.getBoundingClientRect();
     cx = wr.left + wr.width  / 2;
     cy = wr.top  + wr.height / 2;
-
-    /* ellipse radii relative to wrap size */
-    orx = wr.width  * 0.46;
-    ory = wr.height * 0.31;
-
-    /* terminal bounding box in screen coords */
+    /* Derive R1/R2 from terminal size but centre stays on wrap */
     const tr = termEl.getBoundingClientRect();
-    termRect = { x:tr.left, y:tr.top, w:tr.width, h:tr.height };
+    const diag = Math.sqrt(tr.width * tr.width + tr.height * tr.height) / 2;
+    R1 = diag * 1.08;
+    R2 = R1   * 1.72;
+    /* nav bottom boundary */
+    const navEl = document.getElementById('nav');
+    navBottom = navEl ? navEl.getBoundingClientRect().bottom : 72;
+    /* hero divider bottom boundary */
+    const heroFoot = document.querySelector('.hero-foot');
+    heroBottom = heroFoot ? heroFoot.getBoundingClientRect().top : window.innerHeight;
+    /* hero-left bounding box */
+    const hl = document.querySelector('.hero-left');
+    heroLeftRect = hl ? hl.getBoundingClientRect() : null;
+    /* terminal rect */
+    termRect2 = { x:tr.left, y:tr.top, w:tr.width, h:tr.height };
   }
   resize();
-  window.addEventListener('resize', resize, {passive:true});
-  window.addEventListener('scroll', resize, {passive:true});
+  window.addEventListener('resize', resize, { passive: true });
+  window.addEventListener('scroll', resize, { passive: true });
 
-  function accentRGB(){ return DARK() ? [180,245,66] : [28,109,0]; }
+  function accentRGB() { return DARK() ? [180, 245, 66] : [28, 109, 0]; }
 
+  /* ── Logo placement
+       radScale < 1   → inside inner ring
+       1 – 1.42       → between the two rings
+       > 1.42         → outside outer ring
+     Matches scatter visible in reference image.                      ── */
+  const COUNT        = CONFIG.orbitLogos.length;
+  const RADIAL_SCALES = [1.0, 1.58, 0.70, 1.30, 0.85, 1.45, 1.18, 0.60, 1.38];
 
-
-  /* Assign baseAngles evenly — no bunching possible */
- const logoState = logos.map((l,i)=>{
-  const baseAngle = (i / logos.length) * Math.PI * 2 - Math.PI/2; /* start at top */
-    const jitter    = 0.055 + 0.04 * Math.sin(i * 1.9); /* mild radial wobble */
-    const speed     = 1;   /* all logos same orbit speed — prevents clustering */
-    return { label:l.label, name:l.name, baseAngle, jitter, speed };
-  });
-
-  /* ── Particles ── */
-  const particles = Array.from({length:24},()=>({
-    a:       Math.random()*Math.PI*2,
-    jitter:  (Math.random()-.5)*.16,
-    speed:   0.5+Math.random()*.7,
-    size:    0.8+Math.random()*2.2,
-    opacity: 0.25+Math.random()*.45,
-    phase:   Math.random()*Math.PI*2,
+  const logoState = CONFIG.orbitLogos.map((l, i) => ({
+    name:       l.name,
+    label:      l.label,
+    baseAngle:  (i / COUNT) * Math.PI * 2 - Math.PI / 2,
+    radScale:   RADIAL_SCALES[i % RADIAL_SCALES.length],
+    wobbleAmp:  0.038 + 0.022 * Math.sin(i * 2.1),
+    wobblePhs:  i * 0.93,
   }));
 
-  /* ── Hex path helper (in local coords) ── */
-  function hexPath(cx,cy,r){
+  /* ── Particles — 60 % near inner ring, 40 % near outer ── */
+  const particles = Array.from({ length: 34 }, () => {
+    const ring   = Math.random() < 0.6 ? 1 : 2;
+    const spread = (Math.random() - 0.5) * 0.20;
+    return {
+      a:       Math.random() * Math.PI * 2,
+      ring,
+      spread,
+      speed:   0.35 + Math.random() * 0.55,
+      size:    0.65 + Math.random() * 1.9,
+      opacity: 0.28 + Math.random() * 0.48,
+      phase:   Math.random() * Math.PI * 2,
+    };
+  });
+
+  /* Hex in local translated coords */
+  function hex(r) {
     ctx.beginPath();
-    for(let i=0;i<6;i++){
-      const a = Math.PI/6 + i*Math.PI/3;
-      i===0 ? ctx.moveTo(cx+r*Math.cos(a), cy+r*Math.sin(a))
-            : ctx.lineTo(cx+r*Math.cos(a), cy+r*Math.sin(a));
+    for (let i = 0; i < 6; i++) {
+      const a = Math.PI / 6 + i * Math.PI / 3;
+      i === 0
+        ? ctx.moveTo(r * Math.cos(a), r * Math.sin(a))
+        : ctx.lineTo(r * Math.cos(a), r * Math.sin(a));
     }
     ctx.closePath();
   }
 
-  function behindTerminal(x,y){
-    if(!termRect) return false;
-    // Make terminal occlusion smaller + more transparent
-    const margin = 8;
-    return x > termRect.x + margin && 
-          x < termRect.x + termRect.w - margin &&
-          y > termRect.y + margin && 
-          y < termRect.y + termRect.h - margin;
-  }
+  let t  = 0;
+  const SPD = 0.0055;
+  let ar = 180, ag = 245, ab = 66;
 
-  let t = 0;
-  const ORBIT_SPEED = 0.008;
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    t += SPD;
 
-  function draw(){
-    ctx.clearRect(0,0,W,H);
-    t += ORBIT_SPEED;
-
-    /* only draw if hero section is visible */
     const wr = wrap.getBoundingClientRect();
-    if(wr.bottom < 0 || wr.top > window.innerHeight){ requestAnimationFrame(draw); return; }
+    if (wr.bottom < 0 || wr.top > window.innerHeight) { requestAnimationFrame(draw); return; }
 
-    /* keep cx/cy updated each frame (handles float animation on terminal) */
-    cx = wr.left + wr.width/2;
-    cy = wr.top  + wr.height/2;
-    orx = wr.width * 0.46;
-    ory = wr.height * 0.31;
+    /* Fix 1: cx/cy fixed to wrap centre, NOT terminal — orbit doesn't float */
+    cx = wr.left + wr.width  / 2;
+    cy = wr.top  + wr.height / 2;
+    /* R still from terminal size */
+    const tr = termEl.getBoundingClientRect();
+    const diag = Math.sqrt(tr.width * tr.width + tr.height * tr.height) / 2;
+    R1 = diag * 1.08;
+    R2 = R1   * 1.72;
+    /* boundary updates */
+    const navEl = document.getElementById('nav');
+    navBottom = navEl ? navEl.getBoundingClientRect().bottom : 72;
+    const hf = document.querySelector('.hero-foot');
+    heroBottom = hf ? hf.getBoundingClientRect().top : window.innerHeight;
+    const hl = document.querySelector('.hero-left');
+    heroLeftRect = hl ? hl.getBoundingClientRect() : null;
+    termRect2 = { x:tr.left, y:tr.top, w:tr.width, h:tr.height };
 
-    const [ar,ag,ab] = accentRGB();
     const isDark = DARK();
+    [ar, ag, ab] = accentRGB();
+
+    /* ── boundary alpha helper ──
+       Returns 0→1 alpha multiplier for a point (px,py).
+       Fades to 0 in nav zone and below hero bottom line.
+       Fade zone = 40px band so it's smooth not abrupt.              */
+    const FADE_BAND = 40;
+    function boundaryAlpha(px, py) {
+      let a = 1;
+      /* nav fade: points within 40px below nav bottom fade out */
+      if (py < navBottom + FADE_BAND) {
+        a *= Math.max(0, (py - navBottom) / FADE_BAND);
+      }
+      /* hero bottom fade: points within 40px above hero bottom line */
+      if (py > heroBottom - FADE_BAND) {
+        a *= Math.max(0, (heroBottom - py) / FADE_BAND);
+      }
+      return Math.max(0, Math.min(1, a));
+    }
 
     /* 1. AMBIENT GLOW */
-    const g1 = ctx.createRadialGradient(cx,cy,0,cx,cy,orx*1.1);
-    g1.addColorStop(0, `rgba(${ar},${ag},${ab},${isDark?.13:.08})`);
-    g1.addColorStop(.5, `rgba(${ar},${ag},${ab},${isDark?.05:.03})`);
-    g1.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=g1; ctx.fillRect(cx-orx*1.3,cy-orx*1.3,orx*2.6,orx*2.6);
+    const g1 = ctx.createRadialGradient(cx, cy, 0, cx, cy, R2 * 1.35);
+    g1.addColorStop(0,    `rgba(${ar},${ag},${ab},${isDark ? .13 : .08})`);
+    g1.addColorStop(0.45, `rgba(${ar},${ag},${ab},${isDark ? .06 : .035})`);
+    g1.addColorStop(1,    'rgba(0,0,0,0)');
+    ctx.fillStyle = g1;
+    ctx.fillRect(cx - R2 * 1.5, cy - R2 * 1.5, R2 * 3, R2 * 3);
 
-    const g2 = ctx.createRadialGradient(cx,cy,0,cx,cy,orx*.28);
-    g2.addColorStop(0,`rgba(${ar},${ag},${ab},${isDark?.1:.06})`);
-    g2.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=g2; ctx.fillRect(cx-orx*.4,cy-orx*.4,orx*.8,orx*.8);
+    const g2 = ctx.createRadialGradient(cx, cy, 0, cx, cy, R1 * 0.65);
+    g2.addColorStop(0, `rgba(${ar},${ag},${ab},${isDark ? .10 : .06})`);
+    g2.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g2;
+    ctx.fillRect(cx - R1, cy - R1, R1 * 2, R1 * 2);
 
-    /* 2. ELLIPSE RINGS */
-    const drawEllipse=(sx,alpha,dash)=>{
-      ctx.save(); ctx.translate(cx,cy); ctx.scale(1,ory/orx);
-      ctx.beginPath(); ctx.arc(0,0,orx*sx,0,Math.PI*2);
-      ctx.restore();
-      if(dash) ctx.setLineDash([4,9]); else ctx.setLineDash([]);
-      ctx.strokeStyle=`rgba(${ar},${ag},${ab},${alpha})`;
-      ctx.lineWidth=1; ctx.stroke(); ctx.setLineDash([]);
-    };
-    drawEllipse(1.1, isDark?.06:.04, true);
-    drawEllipse(1.0, isDark?.15:.12, false);
+    /* 2. TWO FULL CIRCLES — with clip mask so they fade at nav and hero-bottom */
+    function drawFadedCircle(r, baseAlpha, lw, dash) {
+      /* Sample alpha at top and bottom of circle */
+      const alphaTop    = boundaryAlpha(cx, cy - r);
+      const alphaBottom = boundaryAlpha(cx, cy + r);
+      const alpha       = Math.min(alphaTop, alphaBottom, 1) * baseAlpha;
+      if (alpha <= 0) return;
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.setLineDash(dash || []);
+      ctx.strokeStyle = `rgba(${ar},${ag},${ab},${alpha})`;
+      ctx.lineWidth   = lw;
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    drawFadedCircle(R1,        isDark ? .18 : .13, 1.0);
+    drawFadedCircle(R2,        isDark ? .12 : .09, 0.8);
+    drawFadedCircle(R2 * 0.87, isDark ? .06 : .04, 0.6, [3,8]);
 
-    /* 3. PARTICLES */
-    particles.forEach(p=>{
-      p.a += ORBIT_SPEED * p.speed * .65;
-      const wb  = 1 + p.jitter * Math.sin(t*1.3+p.phase);
-      const px  = cx + orx*wb*Math.cos(p.a);
-      const py  = cy + ory*wb*Math.sin(p.a);
-      const twk = .4 + .6*Math.abs(Math.sin(t*1.8+p.phase));
-      const al  = p.opacity * twk;
-      const pg  = ctx.createRadialGradient(px,py,0,px,py,p.size*5);
-      pg.addColorStop(0,`rgba(${ar},${ag},${ab},${al*.55})`);
-      pg.addColorStop(1,'rgba(0,0,0,0)');
-      ctx.fillStyle=pg; ctx.beginPath(); ctx.arc(px,py,p.size*5,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle=`rgba(${ar},${ag},${ab},${al})`;
-      ctx.beginPath(); ctx.arc(px,py,p.size,0,Math.PI*2); ctx.fill();
+    /* 3. LOGO POSITIONS for this frame */
+    const logoPos = logoState.map((ls, i) => {
+      const angle  = ls.baseAngle + t;
+      const wobble = 1 + ls.wobbleAmp * Math.sin(t * 0.6 + ls.wobblePhs);
+      const r      = R1 * ls.radScale * wobble;
+      return { ls, lx: cx + r * Math.cos(angle), ly: cy + r * Math.sin(angle) };
     });
 
-    /* 4. LOGOS — sorted by Y for depth, upright always */
-    const rendered = logoState.map((ls,i)=>{
-      const angle  = ls.baseAngle + t * ls.speed;
-      const wobble = 1 + ls.jitter * Math.sin(t*.7 + i*1.3);
-      const lx = cx + orx * wobble * Math.cos(angle);
-      const ly = cy + ory * wobble * Math.sin(angle);
-      return {ls, lx, ly};
-    });
-    rendered.sort((a,b)=>a.ly-b.ly);
+    /* 4. CONNECTOR LINES — respect boundary */
+    const CD = R2 * 0.70;
+    for (let i = 0; i < logoPos.length; i++) {
+      for (let j = i + 1; j < logoPos.length; j++) {
+        const a = logoPos[i], b = logoPos[j];
+        const dx = a.lx - b.lx, dy = a.ly - b.ly;
+        const d  = Math.sqrt(dx * dx + dy * dy);
+        if (d < CD) {
+          const midAlpha = boundaryAlpha((a.lx+b.lx)/2, (a.ly+b.ly)/2);
+          const al = (1 - d / CD) * (isDark ? .11 : .08) * midAlpha;
+          if (al <= 0.005) continue;
+          ctx.beginPath(); ctx.moveTo(a.lx, a.ly); ctx.lineTo(b.lx, b.ly);
+          ctx.strokeStyle = `rgba(${ar},${ag},${ab},${al})`;
+          ctx.lineWidth   = 0.65; ctx.stroke();
+        }
+      }
+    }
 
-    rendered.forEach(({ls,lx,ly})=>{
-      const behind = behindTerminal(lx,ly);
-      const depthA = behind ? 0.65 : 1.0;
-      const R = 28;
+    /* 5. PARTICLES — fade near boundaries, frosted effect near nav */
+    particles.forEach(p => {
+      p.a += SPD * p.speed * 0.68;
+      const baseR = p.ring === 1 ? R1 : R2;
+      const r     = baseR * (1 + p.spread);
+      const px    = cx + r * Math.cos(p.a);
+      const py    = cy + r * Math.sin(p.a);
+      const bAlpha = boundaryAlpha(px, py);
+      if (bAlpha <= 0.01) return;
+      const twk = 0.35 + 0.65 * Math.abs(Math.sin(t * 1.55 + p.phase));
+      const al  = p.opacity * twk * bAlpha;
+      const pg  = ctx.createRadialGradient(px, py, 0, px, py, p.size * 5);
+      pg.addColorStop(0, `rgba(${ar},${ag},${ab},${al * 0.5})`);
+      pg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = pg; ctx.beginPath(); ctx.arc(px, py, p.size * 5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = `rgba(${ar},${ag},${ab},${al})`;
+      ctx.beginPath(); ctx.arc(px, py, p.size, 0, Math.PI * 2); ctx.fill();
+    });
+
+    /* 6. LOGOS — boundary fade + frosted glass near nav */
+    logoPos.sort((a, b) => a.ly - b.ly);
+    logoPos.forEach(({ ls, lx, ly }) => {
+      const R   = 28;
+      const bA  = boundaryAlpha(lx, ly);
+      if (bA <= 0.01) return;
+
+      /* frosted glass effect: when logo is near nav (bA < 0.85), 
+         blur the hex body and desaturate so it looks glassy             */
+      const isGlassy = bA < 0.85;
 
       ctx.save();
-      ctx.globalAlpha = depthA;
-      ctx.translate(lx,ly);
+      ctx.globalAlpha = bA;
+      ctx.translate(lx, ly);
 
-      /* glow halo */
-      const hg=ctx.createRadialGradient(0,0,0,0,0,R*2.4);
-      hg.addColorStop(0,`rgba(${ar},${ag},${ab},${behind?.08:.15})`);
-      hg.addColorStop(1,'rgba(0,0,0,0)');
-      ctx.fillStyle=hg; hexPath(0,0,R*2.4); ctx.fill();
+      /* glow halo — reduced when glassy */
+      const hg = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 2.6);
+      hg.addColorStop(0, `rgba(${ar},${ag},${ab},${isGlassy ? .05 : (isDark ? .13 : .09)})`);
+      hg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = hg; hex(R * 2.6); ctx.fill();
 
-      /* body gradient — 3D pop */
-      hexPath(0,0,R);
-      const bg=ctx.createLinearGradient(-R,-R,R,R);
-      if(isDark){ bg.addColorStop(0,'rgba(58,58,52,0.95)'); bg.addColorStop(1,'rgba(16,16,13,0.97)'); }
-      else       { bg.addColorStop(0,'rgba(255,255,253,0.97)'); bg.addColorStop(1,'rgba(228,228,222,0.94)'); }
-      ctx.fillStyle=bg; ctx.fill();
-
-      /* accent border */
-      hexPath(0,0,R);
-      ctx.strokeStyle=`rgba(${ar},${ag},${ab},${behind?.22:.42})`; ctx.lineWidth=1.3; ctx.stroke();
-
-      /* top-face highlight */
-      hexPath(0,0,R-1);
-      ctx.strokeStyle=isDark?'rgba(255,255,255,0.11)':'rgba(255,255,255,0.75)';
-      ctx.lineWidth=1; ctx.stroke();
-
-      /* SVG logo - with fallback - FULL VISIBILITY */
-      const img = logoImages[ls.name];
-      if(img && img.complete && img.naturalWidth > 0){
-        const scale = 24 / Math.max(img.naturalWidth, img.naturalHeight);  // ↑ Larger
-        ctx.save();
-        ctx.globalCompositeOperation = 'source-over';  // ↑ Normal blending (not soft-light)
-        ctx.globalAlpha = 1.0;  // ↑ FULL OPACITY
-        ctx.imageSmoothingEnabled = true;
-        ctx.drawImage(img, -12, -12, 24, 24);  // ↑ Larger & centered
-        ctx.restore();
+      /* hex body — glassy when near boundary */
+      hex(R);
+      if (isGlassy) {
+        /* frosted: semi-transparent with strong blur feel */
+        ctx.fillStyle = isDark
+          ? `rgba(30,30,26,${0.45 + bA * 0.3})`
+          : `rgba(240,240,235,${0.5 + bA * 0.3})`;
       } else {
-        /* FALLBACK: show initials if logo fails */
-        ctx.font='bold 11px JetBrains Mono,monospace'; 
-        ctx.textAlign='center'; ctx.textBaseline='middle';
-        ctx.fillStyle=`rgba(${ar},${ag},${ab},0.9)`;
-        ctx.fillText(ls.name.charAt(0).toUpperCase(), 0, -2);
+        const bg = ctx.createLinearGradient(-R, -R, R, R);
+        isDark
+          ? (bg.addColorStop(0, 'rgba(62,62,55,0.96)'),   bg.addColorStop(1, 'rgba(14,14,11,0.98)'))
+          : (bg.addColorStop(0, 'rgba(255,255,253,0.97)'), bg.addColorStop(1, 'rgba(230,230,224,0.95)'));
+        ctx.fillStyle = bg;
+      }
+      ctx.fill();
+
+      /* accent border — fades when glassy */
+      hex(R);
+      ctx.strokeStyle = `rgba(${ar},${ag},${ab},${isGlassy ? .18 : .42})`; ctx.lineWidth = 1.4; ctx.stroke();
+
+      /* top highlight */
+      if (!isGlassy) {
+        hex(R - 1);
+        ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.8)';
+        ctx.lineWidth = 1; ctx.stroke();
       }
 
-      /* name */
-      // ctx.font='500 5px JetBrains Mono,monospace';
-      // ctx.fillStyle=`rgba(${ar},${ag},${ab},${behind?.55:.82})`;
-      // ctx.textAlign='center'; ctx.textBaseline='alphabetic';
-      // ctx.fillText(ls.name.toUpperCase(),0,12);
+      /* SVG logo — hidden when fully glassy */
+      if (!isGlassy) {
+        const img = logoImages[ls.name];
+        if (img && img.complete && img.naturalWidth > 0) {
+          ctx.save();
+          ctx.globalAlpha = 1;
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, -13, -13, 26, 26);
+          ctx.restore();
+        } else {
+          ctx.font = 'bold 12px JetBrains Mono,monospace';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillStyle = `rgba(${ar},${ag},${ab},.92)`;
+          ctx.fillText((ls.label || ls.name).charAt(0).toUpperCase(), 0, 0);
+        }
+      }
 
       ctx.restore();
     });
@@ -901,7 +976,7 @@ document.getElementById('heroStack').innerHTML = CONFIG.stack.map(s=>`<span clas
     requestAnimationFrame(draw);
   }
 
-  setTimeout(()=>{ resize(); draw(); },300);
+  setTimeout(() => { resize(); draw(); }, 300);
 })();
 
 /* ── CUSTOM CURSOR ── */
@@ -928,14 +1003,15 @@ document.getElementById('heroStack').innerHTML = CONFIG.stack.map(s=>`<span clas
   document.addEventListener('mouseup',()=>document.body.classList.remove('cur-click'));
 })();
 
-/* ── TERMINAL — fixed height, fade-out loop ── */
+/* ── TERMINAL — scrolling window, top lines fade as new ones appear ── */
 (function(){
   const body  = document.getElementById('termBody');
   const lines = CONFIG.terminal;
 
-  /* YOUR ORIGINAL HEIGHT - UNCHANGED */
-  const LINE_H  = 1.45 * 11.2;
-  const TERM_H  = Math.ceil(lines.length * LINE_H) + 24;
+  /* Fixed height showing ~11 lines at a time — same feel as before */
+  const LINE_PX = 1.75 * 0.68 * 16; /* line-height × font-size × 16px/rem = ~19px */
+  const VISIBLE  = 11;
+  const TERM_H   = Math.ceil(VISIBLE * LINE_PX) + 22; /* +top+bottom padding */
   body.style.height    = TERM_H + 'px';
   body.style.minHeight = TERM_H + 'px';
   body.style.maxHeight = TERM_H + 'px';
@@ -944,87 +1020,77 @@ document.getElementById('heroStack').innerHTML = CONFIG.stack.map(s=>`<span clas
 
   const CHAR_MS    = 26;
   const LINE_PAUSE = 100;
-  const CMD_PAUSE  = 480;
-  const LOOP_PAUSE = 1800;
-  const FADE_MS    = 600;
+  const CMD_PAUSE  = 440;
+  const LOOP_PAUSE = 1600;
+  const FADE_MS    = 550;
 
   let lineEl = null, cursorEl = null;
-  let lineEls = []; // NEW: track lines for scrolling
+  let allLines = [];
 
-  const makeCursor = ()=>{ const c=document.createElement('span'); c.className='term-cursor'; return c; };
+  const makeCursor = () => { const c = document.createElement('span'); c.className = 'term-cursor'; return c; };
 
-  function appendLine(type){
-    if(cursorEl&&cursorEl.parentNode) cursorEl.parentNode.removeChild(cursorEl);
+  /* Remove oldest line with fade+collapse when content overflows */
+  function trimTop() {
+    /* only trim if scroll content is taller than viewport */
+    if (body.scrollHeight <= body.clientHeight) return;
+    if (allLines.length === 0) return;
+    const oldest = allLines.shift();
+    const h = oldest.offsetHeight;
+    oldest.style.transition = 'opacity 0.3s ease, max-height 0.32s ease';
+    oldest.style.overflow   = 'hidden';
+    oldest.style.maxHeight  = h + 'px';
+    oldest.style.opacity    = '0';
+    setTimeout(() => {
+      oldest.style.maxHeight = '0';
+      setTimeout(() => { if (oldest.parentNode) oldest.parentNode.removeChild(oldest); }, 330);
+    }, 310);
+  }
+
+  function appendLine(type) {
+    if (cursorEl && cursorEl.parentNode) cursorEl.parentNode.removeChild(cursorEl);
     const span = document.createElement('span');
-    span.className = 'term-line'+(type==='cmd'?' cmd':type==='accent'?' accent-line':type==='gap'?'':' out');
+    span.className = 'term-line' + (type==='cmd'?' cmd':type==='accent'?' accent-line':type==='gap'?'':' out');
     body.appendChild(span);
-    lineEls.push(span); // NEW: track for scrolling
-    scrollAndFade();     // NEW: scroll + fade old lines
+    allLines.push(span);
+    /* slight delay so DOM has rendered the new line height before measuring */
+    requestAnimationFrame(() => trimTop());
     return span;
   }
 
-  // FIXED: Fade ONLY when full
-  let fadePending = false; // Prevent multiple fades
-
-  function scrollAndFade(){
-    const bodyHeight = body.scrollHeight;
-    const viewHeight = body.clientHeight;
-    
-    // Only when truly overflowing
-    if(bodyHeight > viewHeight * 1.5 && lineEls.length > 11 && !fadePending){
-      fadePending = true; // Lock
-      
-      // EXACTLY 1 line fade per call
-      const topLine = lineEls.shift();
-      topLine.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
-      topLine.style.opacity = '0';
-      topLine.style.transform = 'translateY(-8px)';
-      
-      setTimeout(() => {
-        if(topLine.parentNode) topLine.parentNode.removeChild(topLine);
-        fadePending = false; // Unlock for next fade
-      }, 400);
-    }
-    
-    body.scrollTop = body.scrollHeight;
-  }
-
-  function typeChars(text, onDone){
-    let i=0;
-    function tick(){
-      if(i<text.length){
-        const txt=document.createTextNode(text[i]);
-        if(cursorEl&&cursorEl.parentNode===lineEl) lineEl.insertBefore(txt,cursorEl);
+  function typeChars(text, onDone) {
+    let i = 0;
+    function tick() {
+      if (i < text.length) {
+        const txt = document.createTextNode(text[i]);
+        if (cursorEl && cursorEl.parentNode === lineEl) lineEl.insertBefore(txt, cursorEl);
         else lineEl.appendChild(txt);
-        scrollAndFade(); // NEW: scroll during typing
         i++;
-        setTimeout(tick, CHAR_MS+(Math.random()*14-7));
+        setTimeout(tick, CHAR_MS + (Math.random() * 14 - 7));
       } else setTimeout(onDone, LINE_PAUSE);
     }
     tick();
   }
 
-  function runLines(idx){
-    if(idx >= lines.length){
-      /* YOUR ORIGINAL fade + wipe */
+  function runLines(idx) {
+    if (idx >= lines.length) {
       body.style.transition = `opacity ${FADE_MS}ms ease`;
       body.style.opacity    = '0';
-      setTimeout(()=>{
-        if(cursorEl&&cursorEl.parentNode) cursorEl.parentNode.removeChild(cursorEl);
+      setTimeout(() => {
+        if (cursorEl && cursorEl.parentNode) cursorEl.parentNode.removeChild(cursorEl);
         body.innerHTML = '';
-        lineEls = []; // NEW: reset tracker
-        cursorEl = null;
+        allLines   = [];
+        cursorEl   = null;
         body.style.transition = 'none';
         body.style.opacity    = '1';
-        setTimeout(()=> runLines(0), 80);
+        setTimeout(() => runLines(0), 80);
       }, FADE_MS + LOOP_PAUSE);
       return;
     }
 
     const def  = lines[idx];
-    const next = ()=> runLines(idx+1);
+    const next = () => runLines(idx + 1);
 
-    if(def.type==='gap'){
+    if (def.type === 'gap') {
       appendLine('gap');
       setTimeout(next, 55);
       return;
@@ -1034,10 +1100,10 @@ document.getElementById('heroStack').innerHTML = CONFIG.stack.map(s=>`<span clas
     cursorEl = makeCursor();
     lineEl.appendChild(cursorEl);
 
-    setTimeout(()=> typeChars(def.text, next), def.type==='cmd' ? CMD_PAUSE : 0);
+    setTimeout(() => typeChars(def.text, next), def.type === 'cmd' ? CMD_PAUSE : 0);
   }
 
-  setTimeout(()=> runLines(0), 900);
+  setTimeout(() => runLines(0), 900);
 })();
 
 /* ── ABOUT ── */
@@ -1136,8 +1202,8 @@ document.getElementById('themeBtn').addEventListener('click',()=>{
   document.documentElement.setAttribute('data-theme',t==='dark'?'light':'dark');
 });
 
-/* ── STICKY NAV ── */
-window.addEventListener('scroll',()=>{ document.getElementById('nav').classList.toggle('scrolled',window.scrollY>30); },{passive:true});
+/* ── STICKY NAV — always glass, no class needed ── */
+window.addEventListener('scroll',()=>{ /* nav already glass */ },{passive:true});
 
 /* ── SCROLL REVEAL + COUNTERS ── */
 const io=new IntersectionObserver(entries=>{
