@@ -147,35 +147,58 @@
         num:"001", name:"GTI – PCS Migration",
         desc:"Migrated Alliance Bernstein's Production Control System from Perl batch jobs to Python + Airflow DAGs. Redesigned orchestration for better monitoring, failure recovery, and a 40% cut in execution time.",
         tags:["Python","Apache Airflow","Docker","CI/CD","Perl"],
-        link:"https://github.com/Karthikesan-G",
+        type:"company",
       },
       {
         num:"002", name:"MCA Data Pipeline",
         desc:"Automated large-scale extraction from the Ministry of Corporate Affairs portal with robust error handling and structured storage for millions of records.",
-        tags:["Python","Scrapy","MongoDB","Selenium","ETL"],
-        link:"https://github.com/Karthikesan-G",
+        tags:["Python","Scrapy","Requests","Captcha Solving","Tesseract OCR","MongoDB","Selenium","ETL"],
+        type:"company",
       },
       {
-        num:"003", name:"Apollo.io / Aeroleads Scraper",
-        desc:"Resilient B2B scraping system with IP rotation, CAPTCHA handling, async requests, and headless browsing. Processed millions of contact records daily.",
-        tags:["Python","Playwright","Selenium","Asyncio","Multithreading"],
-        link:"https://github.com/Karthikesan-G",
+        num:"003",
+        name:"SOS – US Secretary of State Data Scraper",
+        desc:"Built a scalable scraping system to extract millions of business records from US Secretary of State websites using IP rotation, CAPTCHA handling, and async processing with robust retry and rate limiting.",
+        tags:["Python","Perl","Playwright","Captcha Solving","Proxy Rotation","Selenium","Asyncio","Multithreading"],
+        type:"company",
       },
       {
         num:"004", name:"ONS Consumer Pricing",
         desc:"Automated price extraction and ETL pipeline for UK consumer pricing data. Full pipeline monitoring, scheduling, and alerting with zero manual intervention.",
-        tags:["Python","BeautifulSoup","Pandas","MySQL","Airflow"],
-        link:"https://github.com/Karthikesan-G",
+        tags:["Python","Perl","BeautifulSoup","Pandas","MySQL","Airflow"],
+        type:"company",
       },
+      {
+        num:"005",
+        name:"Logistics Data Platform",
+        desc:"Designed and orchestrated a scalable ELT pipeline using Airflow, dbt, and Snowflake. Implemented star schema, SCD2 models, incremental processing, and data quality tests for reliable analytics.",
+        tags:["Python","Airflow","dbt","Snowflake","SQL","Data Engineering","Draw.io"],
+        link:"https://github.com/Karthikesan-G/logistics-dbt-elt",
+        type:"personal",
+      },
+      {
+        num:"006",
+        name:"Restaurant ETL Data Pipeline",
+        desc:"Built a distributed ETL pipeline processing large-scale restaurant data using PySpark. Integrated AWS S3, Glue, Athena, and Snowflake with Airflow orchestration for scalable analytics.",
+        tags:["Python","PySpark","AWS","S3","Glue","Athena","Airflow","Snowflake","Docker"],
+        link:"https://github.com/Karthikesan-G/restaurant-etl-pipeline",
+        type:"personal",
+      },
+      // {
+      //   num:"007",
+      //   name:"Smart Job Matching System (Scraper + NLP)",
+      //   desc:"Developed a job scraping and ranking system using Selenium and BeautifulSoup. Applied TF-IDF vectorization to match job descriptions with custom keywords and generate relevance scores.",
+      //   tags:["Python","Selenium","BeautifulSoup","NLP","TF-IDF"],
+      // }
     ],
 
     skills: [
       { group:"Languages",             items:["Python","SQL","Perl"] },
-      { group:"Data Engineering",      items:["PySpark","Pandas","NumPy","Apache Airflow","dbt","Snowflake","Databricks"] },
-      { group:"Cloud & Infra",         items:["AWS S3","EC2","Lambda","Glue","Athena","Docker","Kubernetes","Helm"] },
-      { group:"Databases",             items:["MySQL","MS SQL Server","MongoDB"] },
-      { group:"Scraping & Automation", items:["BeautifulSoup","Scrapy","Selenium","Playwright","lxml","Tesseract OCR"] },
-      { group:"Frameworks & Tools",    items:["Django","FastAPI","Git","Azure DevOps","Linux/Unix","Jira"] },
+      { group:"Data Engineering",      items:["PySpark","Pandas","NumPy","Apache Airflow","Snowflake","Databricks","dbt"] },
+      { group:"Cloud & Infra",         items:["AWS","S3","EC2","Lambda","Glue","Athena", "Azure DevOps","Docker","Kubernetes","Helm"] },
+      { group:"Scraping & Automation", items:["BeautifulSoup","Scrapy","Selenium","Playwright","Requests","lxml","Tesseract OCR","PyAutoGUI","UiPath"] },
+      { group:"Databases",             items:["MySQL","MS SQL Server","MongoDB","Aqua Data Studio"] },
+      { group:"Frameworks & Tools",    items:["Django","FastAPI","Git/GitHub","CI/CD Pipelines","Linux/Unix","Jira/Confluence"] },
     ],
 
     certifications: [
@@ -571,7 +594,7 @@
   <div class="s-head reveal"><span class="s-num">01</span><h2 class="t-head s-title">About</h2><div class="s-rule"></div></div>
   <div class="about-grid">
     <div>
-      <p class="t-body reveal">I'm a Senior Data Engineer with 3.7 years of experience designing robust ETL pipelines, automating large-scale data workflows, and migrating legacy systems to modern cloud infrastructure.</p>
+      <p class="t-body reveal">I'm a Software Engineer with 3.7 years of experience designing robust ETL pipelines, automating large-scale data workflows, and migrating legacy systems to modern cloud infrastructure.</p>
       <p class="t-body reveal">Currently at Nuware Systems, supporting Alliance Bernstein's critical data operations — re-engineering Perl batch systems into Python and Airflow-based pipelines that run 40% faster and scale without friction.</p>
       <p class="t-body reveal">I care about clean architecture, reliable delivery, and data you can actually trust.</p>
       <div class="a-links reveal" id="aLinks"></div>
@@ -696,11 +719,29 @@ document.getElementById('heroStack').innerHTML = CONFIG.stack.map(s=>`<span clas
   const ctx    = canvas.getContext('2d');
 
   /* Preload SVG logos */
-  const logoImages = {};
+  /* Preload SVG logos + build inverted cache for dark-mode logos */
+  const logoImages  = {};
+  const invertedCache = {};
+  const INVERT_LIST = ['aws.svg','spark.svg','scrapy.svg','fastapi.svg'];
+  const LOGO_SIZE   = 24;
+
   CONFIG.orbitLogos.forEach(l => {
     const img = new Image();
     img.src   = `logos/${l.name}`;
-    img.onload  = () => { logoImages[l.name] = img; };
+    img.onload = () => {
+      logoImages[l.name] = img;
+      /* If this logo needs inversion, pre-render it to an offscreen canvas once */
+      if (INVERT_LIST.includes(l.name)) {
+        const oc  = document.createElement('canvas');
+        oc.width  = LOGO_SIZE;
+        oc.height = LOGO_SIZE;
+        const octx = oc.getContext('2d');
+        octx.filter = 'brightness(0) contrast(1.8) invert(1)';
+        octx.drawImage(img, 0, 0, LOGO_SIZE, LOGO_SIZE);
+        octx.filter = 'none';
+        invertedCache[l.name] = oc; /* store the canvas, not an image */
+      }
+    };
   });
 
   let W, H, cx, cy, R1, R2;
@@ -973,24 +1014,21 @@ document.getElementById('heroStack').innerHTML = CONFIG.stack.map(s=>`<span clas
 
       /* SVG logo — always visible in both themes */
       /* SVG logo — selective filter (only logos with black parts) */
-    if (!isGlassy) {
-      const img = logoImages[ls.name];
-      if (img && img.complete && img.naturalWidth > 0) {
-        // Pre-set filter once per frame (outside logo loop) - NO save/restore!
-        if (isDark && ['aws.svg', 'spark.svg', 'scrapy.svg', 'fastapi.svg'].includes(ls.name)) {
-          ctx.filter = 'brightness(0) contrast(1.8) invert(1)';
-          ctx.drawImage(img, -12, -12, 24, 24);
-          ctx.filter = 'none'; // Reset immediately
+    /* SVG logo — pre-cached inverted version used in dark mode, zero filter cost */
+      if (!isGlassy) {
+        const img = logoImages[ls.name];
+        if (img && img.complete && img.naturalWidth > 0) {
+          const INVERT_LIST = ['aws.svg','spark.svg','scrapy.svg','fastapi.svg'];
+          const useInverted = DARK() && INVERT_LIST.includes(ls.name);
+          const src = useInverted ? (invertedCache[ls.name] || img) : img;
+          ctx.drawImage(src, -12, -12, 24, 24);
         } else {
-          ctx.drawImage(img, -12, -12, 24, 24); // Native draw = 60fps
+          ctx.font = 'bold 12px JetBrains Mono,monospace';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillStyle = `rgba(${ar},${ag},${ab},.92)`;
+          ctx.fillText((ls.label || ls.name).charAt(0).toUpperCase(), 0, 0);
         }
-      } else {
-        ctx.font = 'bold 12px JetBrains Mono,monospace';
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillStyle = `rgba(${ar},${ag},${ab},.92)`;
-        ctx.fillText((ls.label || ls.name).charAt(0).toUpperCase(), 0, 0);
       }
-    } 
 
       ctx.restore();
     });
@@ -1173,7 +1211,12 @@ document.getElementById('projGrid').innerHTML=CONFIG.projects.map(p=>`
     <div class="proj-name">${p.name}</div>
     <div class="proj-desc">${p.desc}</div>
     <div class="proj-tags">${p.tags.map(t=>`<span class="p-tag">${t}</span>`).join('')}</div>
-    ${p.link?`<a href="${p.link}" target="_blank" style="display:block;margin-top:1rem;font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--accent);text-decoration:none;letter-spacing:.06em">View project →</a>`:''}
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:1rem">
+      ${p.type==='company'
+        ? `<span style="font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:.08em;color:var(--text-muted);border:1px solid var(--border);padding:.15rem .5rem">⚡ Company Project</span>`
+        : `<span style="font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:.08em;color:var(--accent);border:1px solid rgba(var(--accent-rgb),.3);padding:.15rem .5rem">◈ Personal Project</span>`}
+      ${p.link?`<a href="${p.link}" target="_blank" style="font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--accent);text-decoration:none;letter-spacing:.06em">View →</a>`:''}
+    </div>
   </div>`).join('');
 
 /* ── SKILLS ── */
@@ -1194,12 +1237,39 @@ document.getElementById('certGrid').innerHTML=CONFIG.certifications.map(c=>`
   </div>`).join('');
 
 /* ── CONTACT ICONS ── */
-const icons={
-  github:`<svg viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-  linkedin:`<svg viewBox="0 0 24 24"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" stroke-linecap="round" stroke-linejoin="round"/><rect x="2" y="9" width="4" height="12" stroke-linecap="round" stroke-linejoin="round"/><circle cx="4" cy="4" r="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-  email:`<svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke-linecap="round" stroke-linejoin="round"/><polyline points="22,6 12,13 2,6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-  phone:`<svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.78a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-  whatsapp:`<svg viewBox="0 0 24 24" fill="none"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" fill="currentColor" opacity=".9"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.978-1.355A9.956 9.956 0 0 0 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`,
+const icons = {
+  github: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"
+      stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`,
+
+  linkedin: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"
+      stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="2" y="9" width="4" height="12"
+      stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="4" cy="4" r="2"
+      stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`,
+
+  email: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
+      stroke-linecap="round" stroke-linejoin="round"/>
+    <polyline points="22,6 12,13 2,6"
+      stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`,
+
+  phone: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.78a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"
+      stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`,
+
+  whatsapp: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"
+      stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.978-1.355A9.956 9.956 0 0 0 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"
+      stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`
 };
 /* WhatsApp number — update this if needed */
 const waNumber = CONFIG.phone.replace(/\D/g,''); /* strips non-digits */
