@@ -37,7 +37,7 @@
 
     formspreeId: "YOUR_FORMSPREE_ID",
 
-    defaultTheme: "dark",
+    defaultTheme: "light",
 
     stats: [
       { number:0,  suffix:"",   label:"Years Experience",      decimals:1 },
@@ -58,8 +58,9 @@
       { name:"kubernetes.svg",      label:"Kubernetes"       },
       { name:"fastapi.svg",      label:"FastAPI"       },
       { name:"django.svg",      label:"Django"       },
-      { name:"git.svg",      label:"Git"       },
       { name:"sql.svg",      label:"SQL"       },
+      { name:"pandas.svg",      label:"Pandas"       },
+      { name:"azure.svg",      label:"Azure"       },
     ],
 
     terminal: [
@@ -84,8 +85,6 @@
       { type:"accent", text:"● open to work    TRUE" },
       { type:"out",    text:"● location        India (remote ok)" },
       { type:"out",    text:"● response time   fast" },
-      { type:"gap" },
-      { type:"cmd",    text:"clear" },
     ],
 
     experience: [
@@ -147,22 +146,26 @@
       {
         num:"001", name:"GTI – PCS Migration",
         desc:"Migrated Alliance Bernstein's Production Control System from Perl batch jobs to Python + Airflow DAGs. Redesigned orchestration for better monitoring, failure recovery, and a 40% cut in execution time.",
-        tags:["Python","Apache Airflow","Docker","CI/CD","Perl"], link:"",
+        tags:["Python","Apache Airflow","Docker","CI/CD","Perl"],
+        link:"https://github.com/Karthikesan-G",
       },
       {
         num:"002", name:"MCA Data Pipeline",
         desc:"Automated large-scale extraction from the Ministry of Corporate Affairs portal with robust error handling and structured storage for millions of records.",
-        tags:["Python","Scrapy","MongoDB","Selenium","ETL"], link:"",
+        tags:["Python","Scrapy","MongoDB","Selenium","ETL"],
+        link:"https://github.com/Karthikesan-G",
       },
       {
         num:"003", name:"Apollo.io / Aeroleads Scraper",
         desc:"Resilient B2B scraping system with IP rotation, CAPTCHA handling, async requests, and headless browsing. Processed millions of contact records daily.",
-        tags:["Python","Playwright","Selenium","Asyncio","Multithreading"], link:"",
+        tags:["Python","Playwright","Selenium","Asyncio","Multithreading"],
+        link:"https://github.com/Karthikesan-G",
       },
       {
         num:"004", name:"ONS Consumer Pricing",
         desc:"Automated price extraction and ETL pipeline for UK consumer pricing data. Full pipeline monitoring, scheduling, and alerting with zero manual intervention.",
-        tags:["Python","BeautifulSoup","Pandas","MySQL","Airflow"], link:"",
+        tags:["Python","BeautifulSoup","Pandas","MySQL","Airflow"],
+        link:"https://github.com/Karthikesan-G",
       },
     ],
 
@@ -341,7 +344,7 @@
     .term-dot.r{background:#ff5f57}.term-dot.y{background:#ffbd2e}.term-dot.g{background:#28c840}
     .term-title{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--text-muted);letter-spacing:.08em;margin-left:.4rem}
     .term-body{padding:1.1rem 1.3rem 1.3rem;overflow:hidden;position:relative}
-    .term-line{font-family:'JetBrains Mono',monospace;font-size:.68rem;line-height:1.75;white-space:pre;display:block;min-height:1.2rem}
+    .term-line{font-family:'JetBrains Mono',monospace;font-size:.68rem;line-height:1.75;white-space:pre-wrap;word-break:break-word;display:block;min-height:1.2rem}
     .term-line.cmd::before{content:'$ ';color:var(--accent)}
     .term-line.cmd{color:var(--text)}
     .term-line.out{color:var(--text-muted)}
@@ -715,10 +718,7 @@ document.getElementById('heroStack').innerHTML = CONFIG.stack.map(s=>`<span clas
     const tr = termEl.getBoundingClientRect();
     const diag = Math.sqrt(tr.width * tr.width + tr.height * tr.height) / 2;
     R1 = diag * 1.08;
-    R2 = R1   * 1.72;
-    /* nav bottom boundary */
-    const navEl = document.getElementById('nav');
-    navBottom = navEl ? navEl.getBoundingClientRect().bottom : 72;
+    R2 = R1   * 1.72; /* cap so outer ring stays within visible area */
     /* hero divider bottom boundary */
     const heroFoot = document.querySelector('.hero-foot');
     heroBottom = heroFoot ? heroFoot.getBoundingClientRect().top : window.innerHeight;
@@ -740,14 +740,16 @@ document.getElementById('heroStack').innerHTML = CONFIG.stack.map(s=>`<span clas
        > 1.42         → outside outer ring
      Matches scatter visible in reference image.                      ── */
   const COUNT        = CONFIG.orbitLogos.length;
-  const RADIAL_SCALES = [1.0, 1.58, 0.70, 1.30, 0.85, 1.45, 1.18, 0.60, 1.38];
+  /* All radScales ≥ 1.05 so logos never orbit inside terminal bounds.
+     Spread them between inner ring (1.05) and outer ring (1.65).     */
+  const RADIAL_SCALES = [1.12, 1.55, 1.08, 1.38, 1.22, 1.60, 1.30, 1.10, 1.48, 1.18, 1.42, 1.06];
 
   const logoState = CONFIG.orbitLogos.map((l, i) => ({
     name:       l.name,
     label:      l.label,
     baseAngle:  (i / COUNT) * Math.PI * 2 - Math.PI / 2,
     radScale:   RADIAL_SCALES[i % RADIAL_SCALES.length],
-    wobbleAmp:  0.038 + 0.022 * Math.sin(i * 2.1),
+    wobbleAmp:  0.025, /* small wobble — won't push inside terminal */
     wobblePhs:  i * 0.93,
   }));
 
@@ -797,7 +799,6 @@ document.getElementById('heroStack').innerHTML = CONFIG.stack.map(s=>`<span clas
     const diag = Math.sqrt(tr.width * tr.width + tr.height * tr.height) / 2;
     R1 = diag * 1.08;
     R2 = R1   * 1.72;
-    /* boundary updates */
     const navEl = document.getElementById('nav');
     navBottom = navEl ? navEl.getBoundingClientRect().bottom : 72;
     const hf = document.querySelector('.hero-foot');
@@ -810,22 +811,24 @@ document.getElementById('heroStack').innerHTML = CONFIG.stack.map(s=>`<span clas
     [ar, ag, ab] = accentRGB();
 
     /* ── boundary alpha helper ──
-       Returns 0→1 alpha multiplier for a point (px,py).
-       Fades to 0 in nav zone and below hero bottom line.
-       Fade zone = 40px band so it's smooth not abrupt.              */
-    const FADE_BAND = 40;
+       Uses centre-point for rings (so outer ring never gets killed).
+       Uses per-point for logos/particles.
+       Fade band = 80px for smooth dissolve.                           */
+    const FADE_BAND = 80;
     function boundaryAlpha(px, py) {
       let a = 1;
-      /* nav fade: points within 40px below nav bottom fade out */
       if (py < navBottom + FADE_BAND) {
-        a *= Math.max(0, (py - navBottom) / FADE_BAND);
+        const t = Math.max(0, (py - navBottom) / FADE_BAND);
+        a *= t * t * (3 - 2 * t); /* smoothstep — no abrupt edges */
       }
-      /* hero bottom fade: points within 40px above hero bottom line */
       if (py > heroBottom - FADE_BAND) {
-        a *= Math.max(0, (heroBottom - py) / FADE_BAND);
+        const t = Math.max(0, (heroBottom - py) / FADE_BAND);
+        a *= t * t * (3 - 2 * t);
       }
       return Math.max(0, Math.min(1, a));
     }
+    /* Rings use centre alpha so large radii don't get killed at top */
+    const ringCentreAlpha = boundaryAlpha(cx, cy);
 
     /* 1. AMBIENT GLOW */
     const g1 = ctx.createRadialGradient(cx, cy, 0, cx, cy, R2 * 1.35);
@@ -841,13 +844,10 @@ document.getElementById('heroStack').innerHTML = CONFIG.stack.map(s=>`<span clas
     ctx.fillStyle = g2;
     ctx.fillRect(cx - R1, cy - R1, R1 * 2, R1 * 2);
 
-    /* 2. TWO FULL CIRCLES — with clip mask so they fade at nav and hero-bottom */
+    /* 2. CIRCLES — inner uses centre alpha, outer fades segment-by-segment at heroBottom */
     function drawFadedCircle(r, baseAlpha, lw, dash) {
-      /* Sample alpha at top and bottom of circle */
-      const alphaTop    = boundaryAlpha(cx, cy - r);
-      const alphaBottom = boundaryAlpha(cx, cy + r);
-      const alpha       = Math.min(alphaTop, alphaBottom, 1) * baseAlpha;
-      if (alpha <= 0) return;
+      const alpha = ringCentreAlpha * baseAlpha;
+      if (alpha <= 0.005) return;
       ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
       ctx.setLineDash(dash || []);
       ctx.strokeStyle = `rgba(${ar},${ag},${ab},${alpha})`;
@@ -855,9 +855,28 @@ document.getElementById('heroStack').innerHTML = CONFIG.stack.map(s=>`<span clas
       ctx.stroke();
       ctx.setLineDash([]);
     }
-    drawFadedCircle(R1,        isDark ? .18 : .13, 1.0);
-    drawFadedCircle(R2,        isDark ? .12 : .09, 0.8);
-    drawFadedCircle(R2 * 0.87, isDark ? .06 : .04, 0.6, [3,8]);
+
+    /* Outer ring drawn as short arc segments so bottom portion fades at heroBottom */
+    function drawSegmentedCircle(r, baseAlpha, lw) {
+      const SEGS = 120;
+      for (let s = 0; s < SEGS; s++) {
+        const a0 = (s / SEGS) * Math.PI * 2;
+        const a1 = ((s + 1) / SEGS) * Math.PI * 2;
+        const midY = cy + r * Math.sin((a0 + a1) / 2);
+        const bA = boundaryAlpha(cx, midY);
+        const alpha = bA * baseAlpha;
+        if (alpha <= 0.005) continue;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, a0, a1);
+        ctx.strokeStyle = `rgba(${ar},${ag},${ab},${alpha})`;
+        ctx.lineWidth   = lw;
+        ctx.stroke();
+      }
+    }
+
+    drawFadedCircle(R1,        isDark ? .18 : .13, 1.0);        /* inner — centre alpha */
+    drawSegmentedCircle(R2,    isDark ? .14 : .11, 1.0);         /* outer — fades at boundaries */
+    drawSegmentedCircle(R2 * 0.87, isDark ? .07 : .05, 0.7);    /* dashed inner — same */
 
     /* 3. LOGO POSITIONS for this frame */
     const logoPos = logoState.map((ls, i) => {
@@ -952,23 +971,26 @@ document.getElementById('heroStack').innerHTML = CONFIG.stack.map(s=>`<span clas
         ctx.lineWidth = 1; ctx.stroke();
       }
 
-      /* SVG logo — hidden when fully glassy */
-      if (!isGlassy) {
-        const img = logoImages[ls.name];
-        if (img && img.complete && img.naturalWidth > 0) {
-          ctx.save();
-          ctx.globalAlpha = 1;
-          ctx.imageSmoothingEnabled = true;
-          ctx.imageSmoothingQuality = 'high';
-          ctx.drawImage(img, -13, -13, 26, 26);
-          ctx.restore();
+      /* SVG logo — always visible in both themes */
+      /* SVG logo — selective filter (only logos with black parts) */
+    if (!isGlassy) {
+      const img = logoImages[ls.name];
+      if (img && img.complete && img.naturalWidth > 0) {
+        // Pre-set filter once per frame (outside logo loop) - NO save/restore!
+        if (isDark && ['aws.svg', 'spark.svg', 'scrapy.svg', 'fastapi.svg'].includes(ls.name)) {
+          ctx.filter = 'brightness(0) contrast(1.8) invert(1)';
+          ctx.drawImage(img, -12, -12, 24, 24);
+          ctx.filter = 'none'; // Reset immediately
         } else {
-          ctx.font = 'bold 12px JetBrains Mono,monospace';
-          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          ctx.fillStyle = `rgba(${ar},${ag},${ab},.92)`;
-          ctx.fillText((ls.label || ls.name).charAt(0).toUpperCase(), 0, 0);
+          ctx.drawImage(img, -12, -12, 24, 24); // Native draw = 60fps
         }
+      } else {
+        ctx.font = 'bold 12px JetBrains Mono,monospace';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = `rgba(${ar},${ag},${ab},.92)`;
+        ctx.fillText((ls.label || ls.name).charAt(0).toUpperCase(), 0, 0);
       }
+    } 
 
       ctx.restore();
     });
@@ -1008,10 +1030,14 @@ document.getElementById('heroStack').innerHTML = CONFIG.stack.map(s=>`<span clas
   const body  = document.getElementById('termBody');
   const lines = CONFIG.terminal;
 
-  /* Fixed height showing ~11 lines at a time — same feel as before */
-  const LINE_PX = 1.75 * 0.68 * 16; /* line-height × font-size × 16px/rem = ~19px */
+  /* Fixed height — VISIBLE lines + generous padding kept clear at bottom.
+     We trim at VISIBLE-1 so the last typed line never touches the padding edge. */
+  const LINE_PX = Math.round(1.75 * 0.68 * 16); /* line-height × font-size × 16 ≈ 19px */
   const VISIBLE  = 11;
-  const TERM_H   = Math.ceil(VISIBLE * LINE_PX) + 22; /* +top+bottom padding */
+  const PAD_TOP  = Math.round(1.1 * 16);  /* 1.1rem = 17.6px → 18px */
+  const PAD_BOT  = Math.round(1.3 * 16);  /* 1.3rem = 20.8px → 21px */
+  const TERM_H   = VISIBLE * LINE_PX + PAD_TOP + PAD_BOT;
+  const TRIM_AT  = VISIBLE - 1; /* trim one line early — keeps bottom padding visible */
   body.style.height    = TERM_H + 'px';
   body.style.minHeight = TERM_H + 'px';
   body.style.maxHeight = TERM_H + 'px';
@@ -1029,31 +1055,28 @@ document.getElementById('heroStack').innerHTML = CONFIG.stack.map(s=>`<span clas
 
   const makeCursor = () => { const c = document.createElement('span'); c.className = 'term-cursor'; return c; };
 
-  /* Remove oldest line with fade+collapse when content overflows */
-  function trimTop() {
-    /* only trim if scroll content is taller than viewport */
-    if (body.scrollHeight <= body.clientHeight) return;
-    if (allLines.length === 0) return;
+  /* Trim oldest line BEFORE adding a new one when we're at capacity */
+  function trimIfFull() {
+    if (allLines.length < TRIM_AT) return;
     const oldest = allLines.shift();
-    const h = oldest.offsetHeight;
-    oldest.style.transition = 'opacity 0.3s ease, max-height 0.32s ease';
-    oldest.style.overflow   = 'hidden';
-    oldest.style.maxHeight  = h + 'px';
-    oldest.style.opacity    = '0';
+    oldest.style.transition  = 'opacity 0.28s ease, max-height 0.3s ease';
+    oldest.style.overflow    = 'hidden';
+    oldest.style.maxHeight   = (oldest.offsetHeight || LINE_PX) + 'px';
+    oldest.style.opacity     = '0';
     setTimeout(() => {
       oldest.style.maxHeight = '0';
-      setTimeout(() => { if (oldest.parentNode) oldest.parentNode.removeChild(oldest); }, 330);
-    }, 310);
+      setTimeout(() => { if (oldest.parentNode) oldest.parentNode.removeChild(oldest); }, 310);
+    }, 290);
   }
 
   function appendLine(type) {
     if (cursorEl && cursorEl.parentNode) cursorEl.parentNode.removeChild(cursorEl);
+    /* trim BEFORE appending so the new line always has room */
+    trimIfFull();
     const span = document.createElement('span');
     span.className = 'term-line' + (type==='cmd'?' cmd':type==='accent'?' accent-line':type==='gap'?'':' out');
     body.appendChild(span);
     allLines.push(span);
-    /* slight delay so DOM has rendered the new line height before measuring */
-    requestAnimationFrame(() => trimTop());
     return span;
   }
 
@@ -1176,12 +1199,16 @@ const icons={
   linkedin:`<svg viewBox="0 0 24 24"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" stroke-linecap="round" stroke-linejoin="round"/><rect x="2" y="9" width="4" height="12" stroke-linecap="round" stroke-linejoin="round"/><circle cx="4" cy="4" r="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   email:`<svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke-linecap="round" stroke-linejoin="round"/><polyline points="22,6 12,13 2,6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   phone:`<svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.78a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  whatsapp:`<svg viewBox="0 0 24 24" fill="none"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" fill="currentColor" opacity=".9"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.978-1.355A9.956 9.956 0 0 0 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`,
 };
+/* WhatsApp number — update this if needed */
+const waNumber = CONFIG.phone.replace(/\D/g,''); /* strips non-digits */
 document.getElementById('socialIcons').innerHTML=`
   <a href="${CONFIG.github}" target="_blank" class="soc-btn" title="GitHub">${icons.github}</a>
   <a href="${CONFIG.linkedin}" target="_blank" class="soc-btn" title="LinkedIn">${icons.linkedin}</a>
   <a href="mailto:${CONFIG.email}" class="soc-btn" title="Email">${icons.email}</a>
-  <a href="tel:${CONFIG.phone.replace(/\s/g,'')}" class="soc-btn" title="Phone">${icons.phone}</a>`;
+  <a href="tel:${CONFIG.phone.replace(/\s/g,'')}" class="soc-btn" title="Phone">${icons.phone}</a>
+  <a href="https://wa.me/${waNumber}" target="_blank" class="soc-btn" title="WhatsApp">${icons.whatsapp}</a>`;
 
 /* ── CONTACT FORM ── */
 document.getElementById('contactForm').addEventListener('submit',async function(e){
