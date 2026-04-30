@@ -35,7 +35,7 @@
     phone:    "+91 7708243662",
     cvPath:   "https://docs.google.com/document/export?format=pdf&id=1Py8e_ksGdT5EMa4VYdFSLMq1ckb7ooF5htqSbmhQR0k",
 
-    formspreeId: "YOUR_FORMSPREE_ID",
+    formspreeId: "xjgjzqzl",
 
     defaultTheme: "light",
 
@@ -85,6 +85,8 @@
       { type:"accent", text:"● open to work    TRUE" },
       { type:"out",    text:"● location        India (remote ok)" },
       { type:"out",    text:"● response time   fast" },
+      { type:"gap"},
+      { type:"cmd",    text:"clear" },
     ],
 
     experience: [
@@ -159,13 +161,13 @@
         num:"003",
         name:"SOS – US Secretary of State Data Scraper",
         desc:"Built a scalable scraping system to extract millions of business records from US Secretary of State websites using IP rotation, CAPTCHA handling, and async processing with robust retry and rate limiting.",
-        tags:["Python","Perl","Playwright","Captcha Solving","Proxy Rotation","Selenium","Asyncio","Multithreading"],
+        tags:["Python","Perl","Playwright","Captcha Solving","Proxy Rotation","Selenium","Multithreading"],
         type:"company",
       },
       {
         num:"004", name:"ONS Consumer Pricing",
         desc:"Automated price extraction and ETL pipeline for UK consumer pricing data. Full pipeline monitoring, scheduling, and alerting with zero manual intervention.",
-        tags:["Python","Perl","BeautifulSoup","Pandas","MySQL","Airflow"],
+        tags:["Python","Perl","BeautifulSoup","Pandas","MySQL","Airflow","Asyncio"],
         type:"company",
       },
       {
@@ -297,11 +299,11 @@
     .hero-badge{display:inline-flex;align-items:center;gap:.55rem;margin-top:2rem;margin-bottom:.6rem;opacity:0;animation:fadeUp .6s ease forwards .35s}
     .badge-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:blink 2.2s infinite}
     @keyframes blink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.65)}}
-    .hero-role-wrap{height:24px;overflow:hidden;display:flex;align-items:center;opacity:0;animation:fadeUp .6s ease forwards .5s}
+    .hero-role-wrap{margin-top:0.5rem;height:24px;overflow:hidden;display:flex;align-items:center;opacity:0;animation:fadeUp .6s ease forwards .5s}
     .hero-role-item{font-family:'JetBrains Mono',monospace;font-size:.72rem;font-weight:400;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);transition:opacity .25s ease,transform .25s ease}
     .hero-role-item.is-exiting{opacity:0;transform:translateY(8px)}
     .hero-role-item.is-entering{opacity:0;transform:translateY(-8px)}
-    .hero-tagline{margin-top:1rem;font-size:1rem;max-width:460px;opacity:0;animation:fadeUp .6s ease forwards .65s}
+    .hero-tagline{margin-top:0.5rem;font-size:1rem;max-width:460px;opacity:0;animation:fadeUp .6s ease forwards .65s}
     .hero-stack{display:flex;flex-wrap:wrap;gap:.45rem;margin-top:2rem;opacity:0;animation:fadeUp .6s ease forwards .8s}
     .h-pill{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.07em;color:var(--text-muted);border:1px solid var(--border-mid);padding:.2rem .6rem;transition:color .2s,border-color .2s}
     .h-pill:hover{color:var(--accent);border-color:var(--accent)}
@@ -1063,19 +1065,17 @@ document.getElementById('heroStack').innerHTML = CONFIG.stack.map(s=>`<span clas
   document.addEventListener('mouseup',()=>document.body.classList.remove('cur-click'));
 })();
 
-/* ── TERMINAL — scrolling window, top lines fade as new ones appear ── */
+/* ── TERMINAL ── */
 (function(){
   const body  = document.getElementById('termBody');
   const lines = CONFIG.terminal;
 
-  /* Fixed height — VISIBLE lines + generous padding kept clear at bottom.
-     We trim at VISIBLE-1 so the last typed line never touches the padding edge. */
-  const LINE_PX = Math.round(1.75 * 0.68 * 16); /* line-height × font-size × 16 ≈ 19px */
+  const LINE_PX  = Math.round(1.75 * 0.68 * 16);
   const VISIBLE  = 11;
-  const PAD_TOP  = Math.round(1.1 * 16);  /* 1.1rem = 17.6px → 18px */
-  const PAD_BOT  = Math.round(1.3 * 16);  /* 1.3rem = 20.8px → 21px */
+  const PAD_TOP  = Math.round(1.1 * 16);
+  const PAD_BOT  = Math.round(1.3 * 16);
   const TERM_H   = VISIBLE * LINE_PX + PAD_TOP + PAD_BOT;
-  const TRIM_AT  = VISIBLE - 1; /* trim one line early — keeps bottom padding visible */
+  const TRIM_AT  = VISIBLE - 2; /* trim earlier so bottom padding is always clear */
   body.style.height    = TERM_H + 'px';
   body.style.minHeight = TERM_H + 'px';
   body.style.maxHeight = TERM_H + 'px';
@@ -1085,34 +1085,55 @@ document.getElementById('heroStack').innerHTML = CONFIG.stack.map(s=>`<span clas
   const CHAR_MS    = 26;
   const LINE_PAUSE = 100;
   const CMD_PAUSE  = 440;
-  const LOOP_PAUSE = 1600;
-  const FADE_MS    = 550;
+  const LOOP_PAUSE = 1200;
+  const FADE_MS    = 400;
 
   let lineEl = null, cursorEl = null;
   let allLines = [];
 
-  const makeCursor = () => { const c = document.createElement('span'); c.className = 'term-cursor'; return c; };
+  const makeCursor = () => {
+    const c = document.createElement('span');
+    c.className = 'term-cursor';
+    return c;
+  };
 
-  /* Trim oldest line BEFORE adding a new one when we're at capacity */
   function trimIfFull() {
     if (allLines.length < TRIM_AT) return;
     const oldest = allLines.shift();
-    oldest.style.transition  = 'opacity 0.28s ease, max-height 0.3s ease';
-    oldest.style.overflow    = 'hidden';
-    oldest.style.maxHeight   = (oldest.offsetHeight || LINE_PX) + 'px';
-    oldest.style.opacity     = '0';
-    setTimeout(() => {
-      oldest.style.maxHeight = '0';
-      setTimeout(() => { if (oldest.parentNode) oldest.parentNode.removeChild(oldest); }, 310);
-    }, 290);
+    /* if the next sibling in DOM is a gap span, remove it too */
+    const nextSib = oldest.nextSibling;
+    const gapEl = (nextSib && nextSib.classList && nextSib.classList.contains('term-line') && nextSib.textContent === '')
+      ? nextSib : null;
+    oldest.style.transition = 'opacity 0.22s ease, max-height 0.24s ease, margin 0.24s ease';
+    oldest.style.overflow   = 'hidden';
+    oldest.style.maxHeight  = (oldest.offsetHeight || LINE_PX) + 'px';
+    if (gapEl) {
+      gapEl.style.transition = 'opacity 0.22s ease, max-height 0.24s ease';
+      gapEl.style.overflow   = 'hidden';
+      gapEl.style.maxHeight  = (gapEl.offsetHeight || LINE_PX) + 'px';
+    }
+    requestAnimationFrame(() => {
+      oldest.style.opacity      = '0';
+      oldest.style.maxHeight    = '0';
+      oldest.style.marginBottom = '0';
+      if (gapEl) {
+        gapEl.style.opacity      = '0';
+        gapEl.style.maxHeight    = '0';
+        gapEl.style.marginBottom = '0';
+      }
+      setTimeout(() => {
+        if (oldest.parentNode) oldest.parentNode.removeChild(oldest);
+        if (gapEl && gapEl.parentNode) gapEl.parentNode.removeChild(gapEl);
+      }, 260);
+    });
   }
 
   function appendLine(type) {
     if (cursorEl && cursorEl.parentNode) cursorEl.parentNode.removeChild(cursorEl);
-    /* trim BEFORE appending so the new line always has room */
     trimIfFull();
     const span = document.createElement('span');
-    span.className = 'term-line' + (type==='cmd'?' cmd':type==='accent'?' accent-line':type==='gap'?'':' out');
+    span.className = 'term-line' +
+      (type==='cmd' ? ' cmd' : type==='accent' ? ' accent-line' : type==='gap' ? '' : ' out');
     body.appendChild(span);
     allLines.push(span);
     return span;
@@ -1127,24 +1148,32 @@ document.getElementById('heroStack').innerHTML = CONFIG.stack.map(s=>`<span clas
         else lineEl.appendChild(txt);
         i++;
         setTimeout(tick, CHAR_MS + (Math.random() * 14 - 7));
-      } else setTimeout(onDone, LINE_PAUSE);
+      } else {
+        setTimeout(onDone, LINE_PAUSE);
+      }
     }
     tick();
   }
 
   function runLines(idx) {
     if (idx >= lines.length) {
+      /* fade out smoothly, then wipe and restart */
       body.style.transition = `opacity ${FADE_MS}ms ease`;
       body.style.opacity    = '0';
       setTimeout(() => {
         if (cursorEl && cursorEl.parentNode) cursorEl.parentNode.removeChild(cursorEl);
         body.innerHTML = '';
-        allLines   = [];
-        cursorEl   = null;
-        body.style.transition = 'none';
-        body.style.opacity    = '1';
-        setTimeout(() => runLines(0), 80);
-      }, FADE_MS + LOOP_PAUSE);
+        allLines  = [];
+        cursorEl  = null;
+        lineEl    = null;
+        /* fade back in before typing starts */
+        body.style.opacity = '0';
+        body.style.transition = `opacity ${FADE_MS}ms ease`;
+        setTimeout(() => {
+          body.style.opacity = '1';
+          setTimeout(() => runLines(0), FADE_MS);
+        }, LOOP_PAUSE);
+      }, FADE_MS);
       return;
     }
 
